@@ -15,6 +15,12 @@ def index():
     unique_values = []
 
     if request.method == 'POST':
+        # เช็คว่ากดปุ่ม Clear หรือไม่
+        action = request.form.get('action')
+        if action == 'clear':
+            global_df = None
+            return render_template('index.html', data_html=None, columns=[], unique_values=[])
+
         # 1. จัดการการอัปโหลดไฟล์ CSV
         if 'file' in request.files and request.files['file'].filename != '':
             file = request.files['file']
