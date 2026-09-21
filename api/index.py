@@ -14,9 +14,13 @@ def index():
     selected_filters = {}
     error_msg = None
 
+    # บังคับล้างค่าหากมีคำสั่งล้าง หรือเปิดหน้าใหม่
+    if request.method == 'GET':
+        global_df = None
+
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'clear':
+        if action == 'clear' or action == 'reset':
             global_df = None
             return render_template('index.html', data_html=None, filters_data=[], selected_filters={})
 
@@ -48,9 +52,11 @@ def index():
                 if df_loaded is not None and isinstance(df_loaded, pd.DataFrame) and not df_loaded.empty:
                     global_df = df_loaded
                 else:
+                    global_df = None
                     error_msg = "ไม่สามารถอ่านโครงสร้างข้อมูลในไฟล์ได้ กรุณาตรวจสอบไฟล์อีกครั้ง"
 
             except Exception as e:
+                global_df = None
                 error_msg = f"ไม่สามารถอ่านไฟล์ได้: {str(e)}"
 
         # 2. รับค่าจากตัวกรอง
@@ -61,14 +67,10 @@ def index():
                 if val and val != 'ALL':
                     selected_filters[col_name] = val
 
-    # ถ้าเข้าหน้าเว็บแบบ GET (โหลดหน้าใหม่) ให้รีเซ็ตค่าเสมอ
-    else:
-        global_df = None
-
+    # ประมวลผลตารางข้อมูล
     if global_df is not None and isinstance(global_df, pd.DataFrame) and not global_df.empty:
         try:
-            # ดึงรายชื่อคอลัมน์ให้อยู่ในรูป List ของ String อย่างชัดเจน
-            col_names = [str(col) for col in global_df.columns.tolist()]
+            col_names = [str(col) for col in list(global_df.columns)]
             filtered_df = global_df.copy()
 
             def clean_str(val):
@@ -101,7 +103,7 @@ def index():
                                    selected_filters=selected_filters,
                                    error_msg=error_msg)
         except Exception as e:
-            global_df = None
+            global_df = None  # ล้างค่าทันทีหากเกิดความผิดพลาดในการแสดงผล
             error_msg = f"เกิดข้อผิดพลาดในการประมวลผลข้อมูล: {str(e)}"
 
     return render_template('index.html', data_html=None, filters_data=[], selected_filters={}, error_msg=error_msg)

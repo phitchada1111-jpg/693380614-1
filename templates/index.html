@@ -8,7 +8,13 @@
 </head>
 <body class="bg-light">
     <div class="container-fluid px-4 my-4">
-        <h2 class="mb-4">📊 Dashboard & Data Analytics</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📊 Dashboard & Data Analytics</h2>
+            <form action="/" method="post" class="m-0">
+                <input type="hidden" name="action" value="reset">
+                <button type="submit" class="btn btn-outline-danger btn-sm">🔄 รีเซ็ตระบบ (Clear Session)</button>
+            </form>
+        </div>
 
         {% if error_msg %}
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -33,7 +39,7 @@
         </div>
 
         {% if filters_data %}
-        <!-- 2. ส่วนกรองข้อมูลหลายหัวข้อ (Filter Data) -->
+        <!-- 2. ส่วนกรองข้อมูล -->
         <div class="card mb-4">
             <div class="card-header fw-bold d-flex justify-content-between align-items-center">
                 <span>2. กรองข้อมูลตามหัวข้อ (Multi-Column Filters)</span>
