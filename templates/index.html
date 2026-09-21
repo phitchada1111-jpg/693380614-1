@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Web Application</title>
+    <!-- ใช้ Bootstrap CDN เพื่อความสวยงามของ Dashboard -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container my-5">
+        <h2 class="text-center mb-4">📊 Dashboard & Data Analytics</h2>
+
+        <!-- ส่วน Upload ไฟล์ -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">1. อัปโหลดไฟล์ข้อมูล (.csv)</h5>
+                <form method="POST" enctype="multipart/form-data" class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <input class="form-control" type="file" name="file" accept=".csv" required>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if data_html %}
+        <!-- ส่วน Filter แสดงผลตาม Module -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">2. กรองข้อมูล (Filter by Module)</h5>
+                <form method="POST" class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <select name="module_filter" class="form-select" onchange="this.form.submit()">
+                            <option value="ALL" {% if selected_module == 'ALL' %}selected{% endif %}>-- แสดงทั้งหมด (All Modules) --</option>
+                            {% for mod in modules %}
+                                <option value="{{ mod }}" {% if selected_module == mod %}selected{% endif %}>Module: {{ mod }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ส่วนแสดงผล ตาราง Dashboard -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">3. ตารางแสดงข้อมูล</h5>
+                <div class="table-responsive">
+                    {{ data_html | safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
