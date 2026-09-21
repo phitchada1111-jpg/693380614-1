@@ -20,7 +20,7 @@ def index():
             file = request.files['file']
             try:
                 # อ่านไฟล์ CSV ผ่าน pandas
-                global_df = pd.read_csv(file)
+                global_df = pd.read_csv(file, sep=None, engine='python', on_bad_lines='skip')
             except Exception as e:
                 return f"เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}"
         
