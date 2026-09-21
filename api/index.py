@@ -5,28 +5,6 @@ import pandas as pd
 
 app = Flask(__name__, template_folder='../templates')
 
-def load_dataframe_from_file(file_storage):
-    try:
-        content = file_storage.read()
-        encodings = ['utf-8', 'tis-620', 'cp874', 'utf-8-sig', 'latin1']
-        separators = [None, '\t', ',', ';']
-        
-        for enc in encodings:
-            for sep in separators:
-                try:
-                    if sep is None:
-                        df = pd.read_csv(io.BytesIO(content), encoding=enc, sep=None, engine='python', on_bad_lines='skip')
-                    else:
-                        df = pd.read_csv(io.BytesIO(content), encoding=enc, sep=sep, on_bad_lines='skip')
-                    
-                    if df is not None and not df.empty and len(list(df.columns)) > 1:
-                        return df
-                except Exception:
-                    continue
-    except Exception:
-        pass
-    return None
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     filters_data = []
@@ -35,55 +13,75 @@ def index():
     data_html = None
 
     if request.method == 'POST':
+        # ตรวจสอบการอัปโหลดไฟล์
         if 'file' in request.files and request.files['file'].filename != '':
             file = request.files['file']
-            df = load_dataframe_from_file(file)
+            try:
+                # อ่านไฟล์เก็บเข้าหน่วยความจำชั่วคราว
+                file_bytes = file.read()
+                
+                if file_bytes:
+                    encodings = ['utf-8', 'tis-620', 'cp874', 'utf-8-sig', 'latin1']
+                    separators = [None, '\t', ',', ';']
+                    df = None
 
-            if df is not None and not df.empty:
-                try:
-                    # ดึงรายชื่อคอลัมน์
-                    col_names = [str(c) for c in list(df.columns)]
+                    for enc in encodings:
+                        for sep in separators:
+                            try:
+                                stream = io.BytesIO(file_bytes)
+                                if sep is None:
+                                    temp_df = pd.read_csv(stream, encoding=enc, sep=None, engine='python', on_bad_lines='skip')
+                                else:
+                                    temp_df = pd.read_csv(stream, encoding=enc, sep=sep, on_bad_lines='skip')
+                                
+                                if temp_df is not None and not temp_df.empty and len(temp_df.columns) > 1:
+                                    df = temp_df
+                                    break
+                            except Exception:
+                                continue
+                        if df is not None:
+                            break
 
-                    def clean_str(val):
-                        if pd.isna(val):
-                            return ""
-                        if isinstance(val, float) and val.is_integer():
-                            return str(int(val))
-                        return str(val).strip()
+                    if df is not None and not df.empty:
+                        # 1. รับค่าตัวกรองจากฟอร์ม (ถ้ามี)
+                        for key in request.form:
+                            if key.startswith('filter_'):
+                                c_name = key.replace('filter_', '')
+                                val = request.form.get(key)
+                                if val and val != 'ALL':
+                                    selected_filters[c_name] = val
 
-                    # สร้างตัวเลือก Filter
-                    for col in col_names:
-                        try:
-                            raw_vals = df[col].dropna().unique().tolist()
-                            sorted_vals = sorted(raw_vals, key=lambda x: (isinstance(x, str), str(x)))
-                        except Exception:
-                            sorted_vals = df[col].dropna().unique().tolist()
-                        
-                        filters_data.append({
-                            'column': col,
-                            'values': sorted_vals
-                        })
+                        # 2. สร้างรายการตัวเลือก Filter สำหรับทุกคอลัมน์
+                        for col in df.columns:
+                            col_str = str(col)
+                            try:
+                                raw_vals = df[col].dropna().unique().tolist()
+                                # แปลงค่าเป็นข้อความเพื่อป้องกัน Error จากชนิดข้อมูล
+                                sorted_vals = sorted([str(v) for v in raw_vals])
+                            except Exception:
+                                sorted_vals = [str(v) for v in df[col].dropna().unique().tolist()]
 
-                    # รับค่า Filter จากฟอร์ม
-                    for key in request.form:
-                        if key.startswith('filter_'):
-                            c_name = key.replace('filter_', '')
-                            val = request.form.get(key)
-                            if val and val != 'ALL':
-                                selected_filters[c_name] = val
+                            filters_data.append({
+                                'column': col_str,
+                                'values': sorted_vals
+                            })
 
-                    # กรองข้อมูล
-                    filtered_df = df.copy()
-                    for col, selected_val in selected_filters.items():
-                        if col in filtered_df.columns:
-                            filtered_df = filtered_df[filtered_df[col].apply(clean_str) == str(selected_val).strip()]
+                        # 3. กรองข้อมูล
+                        filtered_df = df.copy()
+                        for col_name, selected_val in selected_filters.items():
+                            if col_name in filtered_df.columns:
+                                filtered_df[col_name] = filtered_df[col_name].astype(str).str.strip()
+                                filtered_df = filtered_df[filtered_df[col_name] == str(selected_val).strip()]
 
-                    data_html = filtered_df.to_html(classes='table table-striped table-hover', index=False)
+                        # 4. แปลงเป็น HTML Table
+                        data_html = filtered_df.to_html(classes='table table-striped table-hover', index=False)
+                    else:
+                        error_msg = "ไม่สามารถอ่านรูปแบบข้อมูลในไฟล์ได้ กรุณาตรวจสอบไฟล์อีกครั้ง"
+                else:
+                    error_msg = "ไฟล์ที่อัปโหลดไม่มีข้อมูล"
 
-                except Exception as e:
-                    error_msg = f"เกิดข้อผิดพลาดในการประมวลผลข้อมูล: {str(e)}"
-            else:
-                error_msg = "ไม่สามารถอ่านโครงสร้างข้อมูลในไฟล์ได้ กรุณาตรวจสอบไฟล์อีกครั้ง"
+            except Exception as e:
+                error_msg = f"เกิดข้อผิดพลาดในการประมวลผลไฟล์: {str(e)}"
 
     return render_template('index.html', 
                            data_html=data_html, 
