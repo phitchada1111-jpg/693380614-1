@@ -38,14 +38,14 @@ def index():
                             else:
                                 df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, sep=sep, on_bad_lines='skip')
                             
-                            if df_loaded is not None and hasattr(df_loaded, 'columns') and len(list(df_loaded.columns)) > 1:
+                            if df_loaded is not None and isinstance(df_loaded, pd.DataFrame) and len(df_loaded.columns) > 1:
                                 break
                         except Exception:
                             continue
-                    if df_loaded is not None and hasattr(df_loaded, 'columns') and len(list(df_loaded.columns)) > 1:
+                    if df_loaded is not None and isinstance(df_loaded, pd.DataFrame) and len(df_loaded.columns) > 1:
                         break
 
-                if df_loaded is not None and not df_loaded.empty:
+                if df_loaded is not None and isinstance(df_loaded, pd.DataFrame) and not df_loaded.empty:
                     global_df = df_loaded
                 else:
                     error_msg = "ไม่สามารถอ่านโครงสร้างข้อมูลในไฟล์ได้ กรุณาตรวจสอบไฟล์อีกครั้ง"
@@ -61,13 +61,14 @@ def index():
                 if val and val != 'ALL':
                     selected_filters[col_name] = val
 
-    # ถ้าเป็นการเข้าหน้าเว็บแบบ GET ปกติ (ไม่ใช่การกด Upload หรือ Filter) ให้ล้างค่าเก่าทิ้ง
+    # ถ้าเข้าหน้าเว็บแบบ GET (โหลดหน้าใหม่) ให้รีเซ็ตค่าเสมอ
     else:
         global_df = None
 
-    if global_df is not None and not global_df.empty and hasattr(global_df, 'columns'):
+    if global_df is not None and isinstance(global_df, pd.DataFrame) and not global_df.empty:
         try:
-            col_list = [str(c) for c in list(global_df.columns)]
+            # ดึงรายชื่อคอลัมน์ให้อยู่ในรูป List ของ String อย่างชัดเจน
+            col_names = [str(col) for col in global_df.columns.tolist()]
             filtered_df = global_df.copy()
 
             def clean_str(val):
@@ -77,21 +78,21 @@ def index():
                     return str(int(val))
                 return str(val).strip()
 
-            for c_name in col_list:
+            for c in col_names:
                 try:
-                    raw_values = global_df[c_name].dropna().unique().tolist()
+                    raw_values = global_df[c].dropna().unique().tolist()
                     sorted_vals = sorted(raw_values, key=lambda x: (isinstance(x, str), str(x)))
                 except Exception:
-                    sorted_vals = global_df[c_name].dropna().unique().tolist()
+                    sorted_vals = global_df[c].dropna().unique().tolist()
                 
                 filters_data.append({
-                    'column': c_name,
+                    'column': c,
                     'values': sorted_vals
                 })
 
-            for c_name, selected_val in selected_filters.items():
-                if c_name in filtered_df.columns:
-                    filtered_df = filtered_df[filtered_df[c_name].apply(clean_str) == str(selected_val).strip()]
+            for c, selected_val in selected_filters.items():
+                if c in filtered_df.columns:
+                    filtered_df = filtered_df[filtered_df[c].apply(clean_str) == str(selected_val).strip()]
 
             data_html = filtered_df.to_html(classes='table table-striped table-hover', index=False)
             return render_template('index.html', 
@@ -100,7 +101,7 @@ def index():
                                    selected_filters=selected_filters,
                                    error_msg=error_msg)
         except Exception as e:
-            global_df = None # ล้างค่าทิ้งถ้าประมวลผลผิดพลาด
+            global_df = None
             error_msg = f"เกิดข้อผิดพลาดในการประมวลผลข้อมูล: {str(e)}"
 
     return render_template('index.html', data_html=None, filters_data=[], selected_filters={}, error_msg=error_msg)
