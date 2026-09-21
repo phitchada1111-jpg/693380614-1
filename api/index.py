@@ -39,18 +39,17 @@ def index():
                             else:
                                 df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, sep=sep, on_bad_lines='skip')
                             
-                            # ถ้าอ่านแล้วมีมากกว่า 1 คอลัมน์ แสดงว่าอ่านสำเร็จถูกฟอร์แมต
-                            if df_loaded is not None and len(df_loaded.columns) > 1:
+                            if df_loaded is not None and len(list(df_loaded.columns)) > 1:
                                 break
                         except Exception:
                             continue
-                    if df_loaded is not None and len(df_loaded.columns) > 1:
+                    if df_loaded is not None and len(list(df_loaded.columns)) > 1:
                         break
 
                 if df_loaded is not None and not df_loaded.empty:
                     global_df = df_loaded
                 else:
-                    error_msg = "ไม่สามารถอ่านโครงสร้างข้อมูลในไฟล์ได้ กรุณาตรวจสอบไฟล์ .txt/.csv อีกครั้ง"
+                    error_msg = "ไม่สามารถอ่านโครงสร้างข้อมูลในไฟล์ได้ กรุณาตรวจสอบไฟล์อีกครั้ง"
 
             except Exception as e:
                 error_msg = f"ไม่สามารถอ่านไฟล์ได้: {str(e)}"
@@ -65,7 +64,7 @@ def index():
 
     if global_df is not None and not global_df.empty:
         try:
-            columns = global_df.columns.tolist()
+            columns = [str(c) for c in global_df.columns]
             filtered_df = global_df.copy()
 
             def clean_str(val):
