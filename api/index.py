@@ -39,11 +39,12 @@ def index():
                             else:
                                 df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, sep=sep, on_bad_lines='skip')
                             
-                            if df_loaded is not None and len(list(df_loaded.columns)) > 1:
+                            # สังเกตตรงนี้: ใช้ .columns ไม่ใช่ .columns()
+                            if df_loaded is not None and len(df_loaded.columns) > 1:
                                 break
                         except Exception:
                             continue
-                    if df_loaded is not None and len(list(df_loaded.columns)) > 1:
+                    if df_loaded is not None and len(df_loaded.columns) > 1:
                         break
 
                 if df_loaded is not None and not df_loaded.empty:
@@ -64,7 +65,8 @@ def index():
 
     if global_df is not None and not global_df.empty:
         try:
-            columns = [str(c) for c in global_df.columns]
+            # สังเกตตรงนี้: ใช้ list(global_df.columns)
+            columns = [str(c) for c in list(global_df.columns)]
             filtered_df = global_df.copy()
 
             def clean_str(val):
