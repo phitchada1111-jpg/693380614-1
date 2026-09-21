@@ -21,29 +21,36 @@ def index():
             global_df = None
             return render_template('index.html', data_html=None, filters_data=[], selected_filters={})
 
-        # 1. จัดการอัปโหลดไฟล์
+        # 1. จัดการอัปโหลดไฟล์ (.csv / .txt)
         if 'file' in request.files and request.files['file'].filename != '':
             file = request.files['file']
             try:
-                # อ่านไฟล์เป็น bytes
                 content = file.read()
-                
-                # ลองอ่านด้วย encoding ต่างๆ
                 encodings = ['utf-8', 'tis-620', 'cp874', 'utf-8-sig', 'latin1']
+                separators = [None, '\t', ',', ';']
+                
                 df_loaded = None
                 
                 for enc in encodings:
-                    try:
-                        df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, on_bad_lines='skip')
+                    for sep in separators:
+                        try:
+                            if sep is None:
+                                df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, sep=None, engine='python', on_bad_lines='skip')
+                            else:
+                                df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, sep=sep, on_bad_lines='skip')
+                            
+                            # ถ้าอ่านแล้วมีมากกว่า 1 คอลัมน์ แสดงว่าอ่านสำเร็จถูกฟอร์แมต
+                            if df_loaded is not None and len(df_loaded.columns) > 1:
+                                break
+                        except Exception:
+                            continue
+                    if df_loaded is not None and len(df_loaded.columns) > 1:
                         break
-                    except Exception:
-                        continue
 
-                if df_loaded is None:
-                    # ลองให้ pandas เดา delimiter/encoding เอง
-                    df_loaded = pd.read_csv(io.BytesIO(content), sep=None, engine='python', on_bad_lines='skip')
-
-                global_df = df_loaded
+                if df_loaded is not None and not df_loaded.empty:
+                    global_df = df_loaded
+                else:
+                    error_msg = "ไม่สามารถอ่านโครงสร้างข้อมูลในไฟล์ได้ กรุณาตรวจสอบไฟล์ .txt/.csv อีกครั้ง"
 
             except Exception as e:
                 error_msg = f"ไม่สามารถอ่านไฟล์ได้: {str(e)}"

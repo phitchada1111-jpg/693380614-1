@@ -10,13 +10,20 @@
     <div class="container-fluid px-4 my-4">
         <h2 class="mb-4">📊 Dashboard & Data Analytics</h2>
 
+        {% if error_msg %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            ⚠️ {{ error_msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
         <!-- 1. ส่วนอัปโหลดไฟล์ -->
         <div class="card mb-4">
-            <div class="card-header fw-bold">1. อัปโหลดไฟล์ข้อมูล (.csv)</div>
+            <div class="card-header fw-bold">1. อัปโหลดไฟล์ข้อมูล (.csv, .txt)</div>
             <div class="card-body">
                 <form action="/" method="post" enctype="multipart/form-data" class="row g-3 align-items-center">
                     <div class="col-auto">
-                        <input type="file" name="file" accept=".csv" class="form-control" required>
+                        <input type="file" name="file" accept=".csv, .txt" class="form-control" required>
                     </div>
                     <div class="col-auto">
                         <button type="submit" class="btn btn-primary">Upload</button>
