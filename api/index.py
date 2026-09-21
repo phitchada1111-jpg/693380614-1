@@ -9,17 +9,16 @@ global_df = None
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global global_df
-    selected_column = None
-    selected_value = None
     columns = []
-    unique_values = []
+    filters_data = []
+    selected_filters = {}
 
     if request.method == 'POST':
         # เช็คว่ากดปุ่ม Clear หรือไม่
         action = request.form.get('action')
         if action == 'clear':
             global_df = None
-            return render_template('index.html', data_html=None, columns=[], unique_values=[])
+            return render_template('index.html', data_html=None, filters_data=[], selected_filters={})
 
         # 1. จัดการการอัปโหลดไฟล์ CSV
         if 'file' in request.files and request.files['file'].filename != '':
@@ -29,46 +28,51 @@ def index():
             except Exception as e:
                 return f"เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}"
 
-        # 2. รับค่าคอลัมน์และค่าที่ต้องการกรอง
-        selected_column = request.form.get('selected_column')
-        selected_value = request.form.get('selected_value')
+        # 2. รับค่าตัวกรองทั้งหมดที่ส่งมาจากฟอร์ม (ส่งมาในรูปแบบ filter_<column_name>)
+        for key in request.form:
+            if key.startswith('filter_'):
+                col_name = key.replace('filter_', '')
+                val = request.form.get(key)
+                if val and val != 'ALL':
+                    selected_filters[col_name] = val
 
     if global_df is not None:
         columns = global_df.columns.tolist()
-        
-        # ถ้ายังไม่ได้เลือกคอลัมน์ ให้ใช้คอลัมน์แรกเป็นค่าเริ่มต้น
-        if not selected_column or selected_column not in columns:
-            selected_column = columns[0]
-
-        # ดึงค่า unique ของคอลัมน์ที่เลือก และเรียงลำดับข้อมูล
-        try:
-            raw_values = global_df[selected_column].dropna().unique().tolist()
-            unique_values = sorted(raw_values, key=lambda x: (isinstance(x, str), x))
-        except Exception:
-            unique_values = global_df[selected_column].dropna().unique().tolist()
-
         filtered_df = global_df.copy()
 
-        # กรองข้อมูลตามค่าที่เลือก
-        if selected_value is not None and selected_value != '' and selected_value != 'ALL':
-            def clean_str(val):
-                if pd.isna(val):
-                    return ""
-                if isinstance(val, float) and val.is_integer():
-                    return str(int(val))
-                return str(val).strip()
+        # ฟังก์ชันช่วยจัดการเปรียบเทียบ string และเลขทศนิยม (.0)
+        def clean_str(val):
+            if pd.isna(val):
+                return ""
+            if isinstance(val, float) and val.is_integer():
+                return str(int(val))
+            return str(val).strip()
 
-            filtered_df = filtered_df[filtered_df[selected_column].apply(clean_str) == str(selected_value).strip()]
+        # สร้างรายการข้อมูลตัวเลือก (Unique Values) สำหรับแต่ละคอลัมน์เพื่อนำไปสร้าง Dropdown
+        for col in columns:
+            try:
+                raw_values = global_df[col].dropna().unique().tolist()
+                sorted_vals = sorted(raw_values, key=lambda x: (isinstance(x, str), x))
+            except Exception:
+                sorted_vals = global_df[col].dropna().unique().tolist()
+            
+            filters_data.append({
+                'column': col,
+                'values': sorted_vals
+            })
+
+        # กรองข้อมูลตามเงื่อนไขที่เลือกในทุกๆ คอลัมน์
+        for col, selected_val in selected_filters.items():
+            if col in filtered_df.columns:
+                filtered_df = filtered_df[filtered_df[col].apply(clean_str) == str(selected_val).strip()]
 
         data_html = filtered_df.to_html(classes='table table-striped table-hover', index=False)
         return render_template('index.html', 
                                data_html=data_html, 
-                               columns=columns, 
-                               selected_column=selected_column, 
-                               unique_values=unique_values, 
-                               selected_value=selected_value)
+                               filters_data=filters_data, 
+                               selected_filters=selected_filters)
 
-    return render_template('index.html', data_html=None, columns=[], unique_values=[])
+    return render_template('index.html', data_html=None, filters_data=[], selected_filters={})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

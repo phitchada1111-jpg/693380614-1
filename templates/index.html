@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    <div class="container my-5">
+    <div class="container-fluid px-4 my-4">
         <h2 class="mb-4">📊 Dashboard & Data Analytics</h2>
 
         <!-- 1. ส่วนอัปโหลดไฟล์ -->
@@ -25,31 +25,31 @@
             </div>
         </div>
 
-        {% if columns %}
-        <!-- 2. ส่วนกรองข้อมูล -->
+        {% if filters_data %}
+        <!-- 2. ส่วนกรองข้อมูลหลายหัวข้อ (Filter Data) -->
         <div class="card mb-4">
-            <div class="card-header fw-bold">2. กรองข้อมูล (Filter Data)</div>
+            <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                <span>2. กรองข้อมูลตามหัวข้อ (Multi-Column Filters)</span>
+                <button type="submit" form="filter-form" class="btn btn-success btn-sm">🔍 กรองข้อมูล (Apply Filters)</button>
+            </div>
             <div class="card-body">
-                <form action="/" method="post" class="row g-3">
-                    <!-- เลือกลำดับคอลัมน์ที่ต้องการกรอง -->
-                    <div class="col-md-5">
-                        <label class="form-label">เลือกคอลัมน์ (Column):</label>
-                        <select name="selected_column" class="form-select" onchange="this.form.submit()">
-                            {% for col in columns %}
-                                <option value="{{ col }}" {% if col == selected_column %}selected{% endif %}>{{ col }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- เลือกค่าในคอลัมน์นั้น -->
-                    <div class="col-md-5">
-                        <label class="form-label">เลือกข้อมูล (Value):</label>
-                        <select name="selected_value" class="form-select" onchange="this.form.submit()">
-                            <option value="ALL">-- แสดงทั้งหมด (All) --</option>
-                            {% for val in unique_values %}
-                                <option value="{{ val }}" {% if val|string == selected_value|string %}selected{% endif %}>{{ val }}</option>
-                            {% endfor %}
-                        </select>
+                <form id="filter-form" action="/" method="post">
+                    <div class="row g-3">
+                        {% for item in filters_data %}
+                        <div class="col-md-3 col-sm-6">
+                            <label class="form-label fw-bold text-truncate w-100" title="{{ item.column }}">
+                                {{ item.column }}
+                            </label>
+                            <select name="filter_{{ item.column }}" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="ALL">-- แสดงทั้งหมด (All) --</option>
+                                {% for val in item.values %}
+                                    <option value="{{ val }}" {% if selected_filters.get(item.column)|string == val|string %}selected{% endif %}>
+                                        {{ val }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endfor %}
                     </div>
                 </form>
             </div>
