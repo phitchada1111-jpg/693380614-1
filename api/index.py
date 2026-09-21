@@ -10,7 +10,7 @@ global_df = None
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global global_df
-    columns = []
+    col_list = []
     filters_data = []
     selected_filters = {}
     error_msg = None
@@ -39,7 +39,6 @@ def index():
                             else:
                                 df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, sep=sep, on_bad_lines='skip')
                             
-                            # สังเกตตรงนี้: ใช้ .columns ไม่ใช่ .columns()
                             if df_loaded is not None and len(df_loaded.columns) > 1:
                                 break
                         except Exception:
@@ -65,8 +64,7 @@ def index():
 
     if global_df is not None and not global_df.empty:
         try:
-            # สังเกตตรงนี้: ใช้ list(global_df.columns)
-            columns = [str(c) for c in list(global_df.columns)]
+            col_list = [str(c) for c in global_df.columns.tolist()]
             filtered_df = global_df.copy()
 
             def clean_str(val):
@@ -76,21 +74,21 @@ def index():
                     return str(int(val))
                 return str(val).strip()
 
-            for col in columns:
+            for c_name in col_list:
                 try:
-                    raw_values = global_df[col].dropna().unique().tolist()
+                    raw_values = global_df[c_name].dropna().unique().tolist()
                     sorted_vals = sorted(raw_values, key=lambda x: (isinstance(x, str), str(x)))
                 except Exception:
-                    sorted_vals = global_df[col].dropna().unique().tolist()
+                    sorted_vals = global_df[c_name].dropna().unique().tolist()
                 
                 filters_data.append({
-                    'column': col,
+                    'column': c_name,
                     'values': sorted_vals
                 })
 
-            for col, selected_val in selected_filters.items():
-                if col in filtered_df.columns:
-                    filtered_df = filtered_df[filtered_df[col].apply(clean_str) == str(selected_val).strip()]
+            for c_name, selected_val in selected_filters.items():
+                if c_name in filtered_df.columns:
+                    filtered_df = filtered_df[filtered_df[c_name].apply(clean_str) == str(selected_val).strip()]
 
             data_html = filtered_df.to_html(classes='table table-striped table-hover', index=False)
             return render_template('index.html', 
