@@ -34,14 +34,25 @@ def index():
         if not selected_column or selected_column not in columns:
             selected_column = columns[0]
 
-        # ดึงค่า unique ของคอลัมน์ที่เลือก
-        unique_values = global_df[selected_column].dropna().unique().tolist()
+        # ดึงค่า unique ของคอลัมน์ที่เลือก และเรียงลำดับข้อมูล
+        try:
+            raw_values = global_df[selected_column].dropna().unique().tolist()
+            unique_values = sorted(raw_values, key=lambda x: (isinstance(x, str), x))
+        except Exception:
+            unique_values = global_df[selected_column].dropna().unique().tolist()
 
         filtered_df = global_df.copy()
 
         # กรองข้อมูลตามค่าที่เลือก
-        if selected_value and selected_value != 'ALL':
-            filtered_df = filtered_df[filtered_df[selected_column].astype(str) == str(selected_value)]
+        if selected_value is not None and selected_value != '' and selected_value != 'ALL':
+            def clean_str(val):
+                if pd.isna(val):
+                    return ""
+                if isinstance(val, float) and val.is_integer():
+                    return str(int(val))
+                return str(val).strip()
+
+            filtered_df = filtered_df[filtered_df[selected_column].apply(clean_str) == str(selected_value).strip()]
 
         data_html = filtered_df.to_html(classes='table table-striped table-hover', index=False)
         return render_template('index.html', 
