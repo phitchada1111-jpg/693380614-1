@@ -10,7 +10,6 @@ global_df = None
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global global_df
-    col_list = []
     filters_data = []
     selected_filters = {}
     error_msg = None
@@ -39,11 +38,11 @@ def index():
                             else:
                                 df_loaded = pd.read_csv(io.BytesIO(content), encoding=enc, sep=sep, on_bad_lines='skip')
                             
-                            if df_loaded is not None and len(df_loaded.columns) > 1:
+                            if df_loaded is not None and hasattr(df_loaded, 'columns') and len(list(df_loaded.columns)) > 1:
                                 break
                         except Exception:
                             continue
-                    if df_loaded is not None and len(df_loaded.columns) > 1:
+                    if df_loaded is not None and hasattr(df_loaded, 'columns') and len(list(df_loaded.columns)) > 1:
                         break
 
                 if df_loaded is not None and not df_loaded.empty:
@@ -62,9 +61,13 @@ def index():
                 if val and val != 'ALL':
                     selected_filters[col_name] = val
 
-    if global_df is not None and not global_df.empty:
+    # ถ้าเป็นการเข้าหน้าเว็บแบบ GET ปกติ (ไม่ใช่การกด Upload หรือ Filter) ให้ล้างค่าเก่าทิ้ง
+    else:
+        global_df = None
+
+    if global_df is not None and not global_df.empty and hasattr(global_df, 'columns'):
         try:
-            col_list = [str(c) for c in global_df.columns.tolist()]
+            col_list = [str(c) for c in list(global_df.columns)]
             filtered_df = global_df.copy()
 
             def clean_str(val):
@@ -97,6 +100,7 @@ def index():
                                    selected_filters=selected_filters,
                                    error_msg=error_msg)
         except Exception as e:
+            global_df = None # ล้างค่าทิ้งถ้าประมวลผลผิดพลาด
             error_msg = f"เกิดข้อผิดพลาดในการประมวลผลข้อมูล: {str(e)}"
 
     return render_template('index.html', data_html=None, filters_data=[], selected_filters={}, error_msg=error_msg)
